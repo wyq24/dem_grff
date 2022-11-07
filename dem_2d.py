@@ -48,6 +48,7 @@ def cal_dem_map():
     aia_tresp_en_file = '/Users/walterwei/software/external_package/demreg/python/aia_tresp_en.dat'
     savefile = '/Volumes/Data/20220511/dem_test/20110127/dem_test_demreg_demo1.p'
     fov = [[-1100,-400],[-900,-200]]
+    scalefactor = 1.0 #original resolution
     #time_string = '2011-01-27T00:00:00.000'
     hdulist = fits.open(file_list, mode='readonly')
     time_string = hdulist[1].header['T_OBS'][:-1]
@@ -109,7 +110,7 @@ def cal_dem_map():
 
     cmap_shape = aprep[0].data.shape
     data_cube = np.zeros((cmap_shape[0], cmap_shape[1], 6))
-    num_pix = 4096.**2/(cmap_shape[0]*cmap_shape[1])
+    num_pix = (1 / scalefactor) ** 2
     #num_pix = 1.0
     rdnse = np.array([1.14, 1.18, 1.15, 1.20, 1.20, 1.18])*np.sqrt(num_pix)/num_pix
     for mi, m in enumerate(aprep):
@@ -117,8 +118,9 @@ def cal_dem_map():
         dn2ph_cube = np.broadcast_to(dn2ph, (cmap_shape[0], cmap_shape[1], 6))
         degs_cube = np.broadcast_to(degs, (cmap_shape[0], cmap_shape[1], 6))
         rdnse_cube = np.broadcast_to(rdnse, (cmap_shape[0], cmap_shape[1], 6))
-
-    edata_cube = (((dn2ph_cube * data_cube * num_pix) ** 0.5 / dn2ph_cube / num_pix / degs_cube) ** 2 + rdnse_cube ** 2) ** 0.5 / degs_cube
+        durs_cube = np.broadcast_to(durs, (cmap_shape[0], cmap_shape[1], 6))
+    shotnoise = (dn2ph_cube * data_cube * num_pix) ** 0.5 / dn2ph_cube / num_pix / degs_cube
+    edata_cube = (shotnoise ** 2 + rdnse_cube ** 2) ** 0.5 / durs_cube
     pe_time = time.time()
     print('it take to {} to prep in iter_time'.format(pe_time - iter_st))
     print('{} * {}, {} pixels to calculate in total'.format(data_cube.shape[0], data_cube.shape[1],
